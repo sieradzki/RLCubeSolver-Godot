@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dim1ykmdedp6"]
+
+[ext_resource type="Script" path="res://Cube.gd" id="1_smfa5"]
+
+[node name="Cube" type="Node3D"]
+script = ExtResource("1_smfa5")
