@@ -8,7 +8,7 @@
 script = ExtResource("1_fcgcq")
 
 [node name="Cube" parent="." instance=ExtResource("2_3cfxh")]
-size = 10
+size = 5
 
 [node name="Pivot" type="Marker3D" parent="Cube"]
 unique_name_in_owner = true
