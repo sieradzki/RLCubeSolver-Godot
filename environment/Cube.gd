@@ -16,6 +16,7 @@ func _ready():
 				add_child(cube)
 
 func get_positions(size):
+	# This makes sure the cube is centered on the scene
 	if size % 2 == 0:
 		# If the number is even, the positive side will have +1 pieces
 		return Array(range((-size / 2)+1, size / 2 + 1))
