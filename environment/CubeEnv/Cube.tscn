@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://cpl4etmcvjil0"]
+
+[ext_resource type="Script" path="res://CubeEnv/Cube.gd" id="1_50r07"]
+[ext_resource type="Script" path="res://CubeEnv/CameraPivot.gd" id="2_vgpil"]
+
+[node name="Cube" type="Node3D"]
+script = ExtResource("1_50r07")
+
+[node name="CameraPivot" type="Node3D" parent="."]
+script = ExtResource("2_vgpil")
+
+[node name="OrbitCamera" type="Camera3D" parent="CameraPivot"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="CameraPivot/OrbitCamera"]
+light_energy = 0.695
