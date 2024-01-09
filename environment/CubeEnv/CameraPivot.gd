@@ -39,4 +39,3 @@ func update_camera_position():
 	var new_transform = camera_node.transform
 	new_transform.origin = Vector3(0, 0, distance_from_cube)
 	camera_node.transform = new_transform
-	print(camera_node.transform)

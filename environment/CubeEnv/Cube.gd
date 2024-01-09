@@ -4,33 +4,12 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 5
+@export var cube_size = 3
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
 func _ready():
 	create_cube(cube_size) 
-
-func _input(delta):
-	if Input.is_key_pressed(KEY_R):
-		rotate_side(CubeSide.LEFT, 1, true)
-	elif Input.is_key_pressed(KEY_F):
-		rotate_side(CubeSide.FRONT, 0, false)
-	elif Input.is_key_pressed(KEY_U):
-		rotate_side(CubeSide.TOP, 0, true)
-	elif Input.is_key_pressed(KEY_D):
-		rotate_side(CubeSide.BOTTOM, cube_size - 1, false)
-	elif Input.is_key_pressed(KEY_L):
-		rotate_side(CubeSide.RIGHT, cube_size - 1, true)
-	elif Input.is_key_pressed(KEY_B):
-		rotate_side(CubeSide.BACK, 1, false)
-	# Handling for rotating different layers
-	elif Input.is_key_pressed(KEY_1):
-		rotate_side(CubeSide.LEFT, 0, true)
-	elif Input.is_key_pressed(KEY_2):
-		rotate_side(CubeSide.LEFT, 1, true)
-	elif Input.is_key_pressed(KEY_3):
-		rotate_side(CubeSide.LEFT, 2, true)
 		
 func create_cube(size):
 	# Center the cube on the scene
@@ -47,9 +26,15 @@ func create_cube(size):
 					piece.transform.origin = position
 					# Add piece as a child of big cube
 					add_child(piece)
+					# Hide unseen faces
+					piece.get_child(CubeSide.TOP).visible = y == size - 1
+					piece.get_child(CubeSide.BOTTOM).visible = y == 0
+					piece.get_child(CubeSide.LEFT).visible = x == 0
+					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
+					piece.get_child(CubeSide.BACK).visible = z == 0
+					piece.get_child(CubeSide.FRONT).visible = z == size - 1
 
-
-func get_side_pieces(side, layer):
+func get_pieces_on_side(side, layer):
 	var pieces = []
 	var middle = cube_size / 2
 	var half_size = (cube_size - 1) / 2.0
@@ -106,44 +91,3 @@ func get_side_pieces(side, layer):
 					elif cube_size % 2 == 1 and position.y == -layer:
 						pieces.append(piece)
 	return pieces
-			
-func rotate_side(side, layer, clockwise):
-	var angle = -PI / 2 if clockwise else PI / 2
-	var rotation_axis = Vector3()
-	var rotation_center = Vector3()
-
-	# Determine the axis and center of rotation based on the side
-	match side:
-		CubeSide.FRONT:
-			rotation_axis = Vector3(0, 0, 1)
-			rotation_center = Vector3(0, 0, -layer)
-		CubeSide.BACK:
-			rotation_axis = Vector3(0, 0, -1)
-			rotation_center = Vector3(0, 0, layer)
-		CubeSide.LEFT:
-			rotation_axis = Vector3(1, 0, 0)
-			rotation_center = Vector3(-layer, 0, 0)
-		CubeSide.RIGHT:
-			rotation_axis = Vector3(-1, 0, 0)
-			rotation_center = Vector3(layer, 0, 0)
-		CubeSide.TOP:
-			rotation_axis = Vector3(0, 1, 0)
-			rotation_center = Vector3(0, layer, 0)
-		CubeSide.BOTTOM:
-			rotation_axis = Vector3(0, -1, 0)
-			rotation_center = Vector3(0, -layer, 0)
-
-	# Get the pieces for the specified side
-	var pieces = get_side_pieces(side, layer)
-	
-	for piece in pieces:
-		# Convert global position to local position
-		var local_position = global_transform.affine_inverse() * piece.global_transform.origin
-		# Calculate the rotated position
-		var new_local_pos = (local_position - rotation_center).rotated(rotation_axis, angle) + rotation_center
-		# Convert the new local position back to global position and apply it
-		piece.global_transform.origin = global_transform * new_local_pos
-		# Apply rotation to piece
-		piece.rotate_object_local(rotation_axis, angle)
-
-
