@@ -4,7 +4,7 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 3
+@export var cube_size = 5
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
@@ -16,6 +16,21 @@ func _input(delta):
 		rotate_side(CubeSide.LEFT, 1, true)
 	elif Input.is_key_pressed(KEY_F):
 		rotate_side(CubeSide.FRONT, 0, false)
+	elif Input.is_key_pressed(KEY_U):
+		rotate_side(CubeSide.TOP, 0, true)
+	elif Input.is_key_pressed(KEY_D):
+		rotate_side(CubeSide.BOTTOM, cube_size - 1, false)
+	elif Input.is_key_pressed(KEY_L):
+		rotate_side(CubeSide.RIGHT, cube_size - 1, true)
+	elif Input.is_key_pressed(KEY_B):
+		rotate_side(CubeSide.BACK, 1, false)
+	# Handling for rotating different layers
+	elif Input.is_key_pressed(KEY_1):
+		rotate_side(CubeSide.LEFT, 0, true)
+	elif Input.is_key_pressed(KEY_2):
+		rotate_side(CubeSide.LEFT, 1, true)
+	elif Input.is_key_pressed(KEY_3):
+		rotate_side(CubeSide.LEFT, 2, true)
 		
 func create_cube(size):
 	# Center the cube on the scene
