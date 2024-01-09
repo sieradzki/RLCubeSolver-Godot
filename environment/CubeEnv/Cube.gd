@@ -13,7 +13,7 @@ func _ready():
 
 func _input(delta):
 	if Input.is_key_pressed(KEY_R):
-		rotate_side(CubeSide.FRONT, 0, true)
+		rotate_side(CubeSide.RIGHT, true, 1)
 	elif Input.is_key_pressed(KEY_F):
 		rotate_side(CubeSide.FRONT, 0, false)
 		
@@ -49,25 +49,36 @@ func get_side_pieces(side, layer):
 				# Add similar logic for TOP, BOTTOM, LEFT, RIGHT
 	return pieces
 
-func rotate_side(side, layer, clockwise):
-	var angle = -PI/2 if clockwise else PI/2
-	var rotation_axis = Vector3()
-	
-	# Assuming the cube is centered at the origin, calculate the rotation center for the front face
-	var rotation_center = Vector3(0, 0, -layer)  # for front side, assuming 'layer' is 0 for the frontmost layer
-
+func get_rotation_axis(side):
 	match side:
-		CubeSide.FRONT:
-			rotation_axis = Vector3(0, 0, 1)
-		# Add cases for other sides
+		CubeSide.FRONT, CubeSide.BACK:
+			return Vector3(0, 0, 1)
+		CubeSide.LEFT, CubeSide.RIGHT:
+			return Vector3(1, 0, 0)
+		CubeSide.TOP, CubeSide.BOTTOM:
+			return Vector3(0, 1, 0)
 
-	for piece in get_side_pieces(side, layer):
-		# Convert global position to local position by subtracting the global position of the parent node (Cube)
-		var local_position = global_transform.affine_inverse() * piece.global_transform.origin
-		var new_local_pos = local_position.rotated(rotation_axis, angle)
-		
-		# Convert the new local position back to global position and apply it
-		piece.global_transform.origin = global_transform * new_local_pos
+func get_rotation_center(side, layer):
+	var mid = (cube_size - 1) / 2.0
+	var layer_pos = layer - mid
+	match side:
+		CubeSide.FRONT, CubeSide.BACK:
+			return Vector3(mid, mid, layer_pos)
+		CubeSide.LEFT, CubeSide.RIGHT:
+			return Vector3(layer_pos, mid, mid)
+		CubeSide.TOP, CubeSide.BOTTOM:
+			return Vector3(mid, layer_pos, mid)
+			
+func rotate_side(side, clockwise, layer = 0):
+	var angle = clockwise if -PI / 2 else PI / 2
+	var rotation_axis = get_rotation_axis(side)
+	var rotation_center = get_rotation_center(side, layer)
+
+	var pieces = get_side_pieces(side, layer)
+	for piece in pieces:
+		var local_position = piece.transform.origin - rotation_center
+		var rotated_position = local_position.rotated(rotation_axis, angle)
+		piece.transform.origin = rotated_position + rotation_center
 
 		# Apply rotation to piece
 		piece.rotate_object_local(rotation_axis, angle)
