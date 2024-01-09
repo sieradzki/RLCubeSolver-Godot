@@ -4,7 +4,7 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 5
+@export var cube_size = 3
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
@@ -13,7 +13,7 @@ func _ready():
 
 func _input(delta):
 	if Input.is_key_pressed(KEY_R):
-		rotate_side(CubeSide.RIGHT, true, 1)
+		rotate_side(CubeSide.LEFT, 1, true)
 	elif Input.is_key_pressed(KEY_F):
 		rotate_side(CubeSide.FRONT, 0, false)
 		
@@ -36,50 +36,98 @@ func create_cube(size):
 
 func get_side_pieces(side, layer):
 	var pieces = []
+	var middle = cube_size / 2
+	var half_size = (cube_size - 1) / 2.0
 	for piece in get_children():
-		if piece is CSGBox3D:  # Make sure to only consider the cube pieces
-			var position = piece.transform.origin  # Use transform.origin for the position
+		if piece is CSGBox3D:
+			var position = piece.transform.origin
 			match side:
 				CubeSide.FRONT:
-					if position.z == layer:
+					if cube_size % 2 == 0 and (position.z == half_size or position.z == -half_size):
+						if layer == 0 and position.z == -half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.z == half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.z == -layer:
 						pieces.append(piece)
 				CubeSide.BACK:
-					if position.z == -layer:
+					if cube_size % 2 == 0 and (position.z == half_size or position.z == -half_size):
+						if layer == 0 and position.z == half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.z == -half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.z == layer:
 						pieces.append(piece)
-				# Add similar logic for TOP, BOTTOM, LEFT, RIGHT
+				CubeSide.LEFT:
+					if cube_size % 2 == 0 and (position.x == half_size or position.x == -half_size):
+						if layer == 0 and position.x == -half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.x == half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.x == -layer:
+						pieces.append(piece)
+				CubeSide.RIGHT:
+					if cube_size % 2 == 0 and (position.x == half_size or position.x == -half_size):
+						if layer == 0 and position.x == half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.x == -half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.x == layer:
+						pieces.append(piece)
+				CubeSide.TOP:
+					if cube_size % 2 == 0 and (position.y == half_size or position.y == -half_size):
+						if layer == 0 and position.y == half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.y == -half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.y == layer:
+						pieces.append(piece)
+				CubeSide.BOTTOM:
+					if cube_size % 2 == 0 and (position.y == half_size or position.y == -half_size):
+						if layer == 0 and position.y == -half_size:
+							pieces.append(piece)
+						elif layer == 1 and position.y == half_size:
+							pieces.append(piece)
+					elif cube_size % 2 == 1 and position.y == -layer:
+						pieces.append(piece)
 	return pieces
-
-func get_rotation_axis(side):
-	match side:
-		CubeSide.FRONT, CubeSide.BACK:
-			return Vector3(0, 0, 1)
-		CubeSide.LEFT, CubeSide.RIGHT:
-			return Vector3(1, 0, 0)
-		CubeSide.TOP, CubeSide.BOTTOM:
-			return Vector3(0, 1, 0)
-
-func get_rotation_center(side, layer):
-	var mid = (cube_size - 1) / 2.0
-	var layer_pos = layer - mid
-	match side:
-		CubeSide.FRONT, CubeSide.BACK:
-			return Vector3(mid, mid, layer_pos)
-		CubeSide.LEFT, CubeSide.RIGHT:
-			return Vector3(layer_pos, mid, mid)
-		CubeSide.TOP, CubeSide.BOTTOM:
-			return Vector3(mid, layer_pos, mid)
 			
-func rotate_side(side, clockwise, layer = 0):
-	var angle = clockwise if -PI / 2 else PI / 2
-	var rotation_axis = get_rotation_axis(side)
-	var rotation_center = get_rotation_center(side, layer)
+func rotate_side(side, layer, clockwise):
+	var angle = -PI / 2 if clockwise else PI / 2
+	var rotation_axis = Vector3()
+	var rotation_center = Vector3()
 
+	# Determine the axis and center of rotation based on the side
+	match side:
+		CubeSide.FRONT:
+			rotation_axis = Vector3(0, 0, 1)
+			rotation_center = Vector3(0, 0, -layer)
+		CubeSide.BACK:
+			rotation_axis = Vector3(0, 0, -1)
+			rotation_center = Vector3(0, 0, layer)
+		CubeSide.LEFT:
+			rotation_axis = Vector3(1, 0, 0)
+			rotation_center = Vector3(-layer, 0, 0)
+		CubeSide.RIGHT:
+			rotation_axis = Vector3(-1, 0, 0)
+			rotation_center = Vector3(layer, 0, 0)
+		CubeSide.TOP:
+			rotation_axis = Vector3(0, 1, 0)
+			rotation_center = Vector3(0, layer, 0)
+		CubeSide.BOTTOM:
+			rotation_axis = Vector3(0, -1, 0)
+			rotation_center = Vector3(0, -layer, 0)
+
+	# Get the pieces for the specified side
 	var pieces = get_side_pieces(side, layer)
+	
 	for piece in pieces:
-		var local_position = piece.transform.origin - rotation_center
-		var rotated_position = local_position.rotated(rotation_axis, angle)
-		piece.transform.origin = rotated_position + rotation_center
-
+		# Convert global position to local position
+		var local_position = global_transform.affine_inverse() * piece.global_transform.origin
+		# Calculate the rotated position
+		var new_local_pos = (local_position - rotation_center).rotated(rotation_axis, angle) + rotation_center
+		# Convert the new local position back to global position and apply it
+		piece.global_transform.origin = global_transform * new_local_pos
 		# Apply rotation to piece
 		piece.rotate_object_local(rotation_axis, angle)
 
