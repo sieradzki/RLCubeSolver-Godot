@@ -4,50 +4,51 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 5
+@export var cube_size = 3
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
-var layer = -2
+
 const AXIS_X = Vector3(1, 0, 0)
 const AXIS_Y = Vector3(0, 1, 0)
 const AXIS_Z = Vector3(0, 0, 1)
+
 var current_rotation_group: Node3D = null
 
+var cube_pieces = Array()
 func _ready():
 	create_cube(cube_size) 
 	
 func _input(delta):
 	if Input.is_key_pressed(KEY_1):
-		rotate_side(CubeSide.RIGHT, 0, 90)
+		rotate_side(CubeSide.BOTTOM, 0, 90)
 	elif Input.is_key_pressed(KEY_Q):
-		rotate_side(CubeSide.RIGHT, 0, -90)
+		rotate_side(CubeSide.BOTTOM, 0, -90)
 	elif Input.is_key_pressed(KEY_2):
-		rotate_side(CubeSide.RIGHT, 1, 90)
+		rotate_side(CubeSide.BOTTOM, 1, 90)
 	elif Input.is_key_pressed(KEY_W):
-		rotate_side(CubeSide.RIGHT, 1, -90)
+		rotate_side(CubeSide.BOTTOM, 1, -90)
 	elif Input.is_key_pressed(KEY_3):
-		rotate_side(CubeSide.RIGHT, 2, 90)
+		rotate_side(CubeSide.BOTTOM, 2, 90)
 	elif Input.is_key_pressed(KEY_E):
-		rotate_side(CubeSide.RIGHT, 2, -90)
+		rotate_side(CubeSide.BOTTOM, 2, -90)
 	if Input.is_key_pressed(KEY_4):
-		rotate_side(CubeSide.FRONT, 0, 90)
+		rotate_side(CubeSide.LEFT, 0, 90)
 	elif Input.is_key_pressed(KEY_R):
-		rotate_side(CubeSide.FRONT, 0, -90)
+		rotate_side(CubeSide.LEFT, 0, -90)
 	elif Input.is_key_pressed(KEY_5):
-		rotate_side(CubeSide.FRONT, 1, 90)
+		rotate_side(CubeSide.LEFT, 1, 90)
 	elif Input.is_key_pressed(KEY_T):
-		rotate_side(CubeSide.FRONT, 1, -90)
+		rotate_side(CubeSide.LEFT, 1, -90)
 	elif Input.is_key_pressed(KEY_6):
-		rotate_side(CubeSide.FRONT, 2, 90)
+		rotate_side(CubeSide.LEFT, 2, 90)
 	elif Input.is_key_pressed(KEY_Y):
-		rotate_side(CubeSide.FRONT, 2, -90)
+		rotate_side(CubeSide.LEFT, 2, -90)
 	
 func rotate_side(side, layer, angle):
 	if current_rotation_group:
 			disband_rotation_group(current_rotation_group)
 	current_rotation_group = create_rotation_group(side, layer)
 	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
-	current_rotation_group = null
 	
 func get_rotation_axis(side: CubeSide):
 	match side:
@@ -60,6 +61,16 @@ func get_rotation_axis(side: CubeSide):
 
 func create_cube(size):
 	# Center the cube on the scene
+	cube_pieces = []
+	for x in range(size):
+		var layer = []  # Create a new layer
+		for y in range(size):
+			var row = []  # Create a new row in the current layer
+			for z in range(size):
+				row.append(null)  # Initialize each cell in the row
+			layer.append(row)  # Add the row to the current layer
+		cube_pieces.append(layer)  # Add the layer to the cube
+
 	var offset = (size - 1) / 2.0
 	# Dynamically create cube of given size
 	for x in range(size):
@@ -73,6 +84,7 @@ func create_cube(size):
 					piece.transform.origin = position
 					# Add piece as a child of big cube
 					add_child(piece)
+					cube_pieces[x][y][z] = piece
 					# Hide unseen faces
 					piece.get_child(CubeSide.TOP).visible = y == size - 1
 					piece.get_child(CubeSide.BOTTOM).visible = y == 0
@@ -82,45 +94,43 @@ func create_cube(size):
 					piece.get_child(CubeSide.FRONT).visible = z == size - 1
 
 
-func is_in_layer(pos, axis, layer) -> bool:
-	var half_size = cube_size / 2
-	return int(abs(pos[axis]) + 0.5) == half_size - layer
-
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
-	for piece in get_children():
-		var pos = piece.transform.origin
-		var half_size = cube_size / 2
+	var size = cube_pieces.size()
 
-		match side:
-			CubeSide.TOP:
-				if pos.y > half_size - 1 and is_in_layer(pos, 1, layer):
-					pieces.append(piece)
-
-			CubeSide.BOTTOM:
-				if pos.y < -half_size + 1 and is_in_layer(pos, 1, layer):
-					pieces.append(piece)
-
-			CubeSide.LEFT:
-				if pos.x < -half_size + 1 and is_in_layer(pos, 0, layer):
-					pieces.append(piece)
-
-			CubeSide.RIGHT:
-				if pos.x > half_size - 1 and is_in_layer(pos, 0, layer):
-					pieces.append(piece)
-
-			CubeSide.FRONT:
-				if pos.z < -half_size + 1 and is_in_layer(pos, 2, layer):
-					pieces.append(piece)
-
-			CubeSide.BACK:
-				if pos.z > half_size - 1 and is_in_layer(pos, 2, layer):
-					pieces.append(piece)
+	match side:
+		CubeSide.TOP:
+			for x in range(size):
+				for z in range(size):
+					if cube_pieces[x][size - 1 - layer][z] != null:
+						pieces.append(cube_pieces[x][size - 1 - layer][z])
+		CubeSide.BOTTOM:
+			for x in range(size):
+				for z in range(size):
+					if cube_pieces[x][layer][z] != null:
+						pieces.append(cube_pieces[x][layer][z])
+		CubeSide.LEFT:
+			for y in range(size):
+				for z in range(size):
+					if cube_pieces[layer][y][z] != null:
+						pieces.append(cube_pieces[layer][y][z])
+		CubeSide.RIGHT:
+			for y in range(size):
+				for z in range(size):
+					if cube_pieces[size - 1 - layer][y][z] != null:
+						pieces.append(cube_pieces[size - 1 - layer][y][z])
+		CubeSide.FRONT:
+			for x in range(size):
+				for y in range(size):
+					if cube_pieces[x][y][layer] != null:
+						pieces.append(cube_pieces[x][y][layer])
+		CubeSide.BACK:
+			for x in range(size):
+				for y in range(size):
+					if cube_pieces[x][y][size - 1 - layer] != null:
+						pieces.append(cube_pieces[x][y][size - 1 - layer])
 
 	return pieces
-
-func is_approx(value1: float, value2: float, tolerance: float = 0.01) -> bool:
-	return abs(value1 - value2) <= tolerance
 
 func create_rotation_group(side, layer) -> Node3D:
 	var rotation_group = Node3D.new()
@@ -152,7 +162,7 @@ func disband_rotation_group(rotation_group: Node3D):
 	# Remove the rotation group from the scene tree
 	rotation_group.queue_free()
 	
-func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.1):
+func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.3):
 	var tween = get_tree().create_tween()
 	var start_rotation = rotation_group.rotation_degrees
 	var end_rotation = start_rotation + axis * angle_degrees
@@ -166,4 +176,5 @@ func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, d
 
 func _on_tween_finished(rotation_group):
 	disband_rotation_group(rotation_group)
+	current_rotation_group = null
 	
