@@ -4,36 +4,82 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 5
+@export var cube_size = 3
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
+# Rotation axes
+const AXIS_X = Vector3(1, 0, 0)
+const AXIS_Y = Vector3(0, 1, 0)
+const AXIS_Z = Vector3(0, 0, 1)
+
+var current_rotation_group: Node3D = null
+
+# For storing cube's pieces state
+var cube_pieces = Array()
+
+var is_rotating = false
+
 func _ready():
 	create_cube(cube_size) 
-
+	
 func _input(delta):
-	if Input.is_key_pressed(KEY_R):
-		rotate_side(CubeSide.LEFT, 1, true)
-	elif Input.is_key_pressed(KEY_F):
-		rotate_side(CubeSide.FRONT, 0, false)
-	elif Input.is_key_pressed(KEY_U):
-		rotate_side(CubeSide.TOP, 0, true)
-	elif Input.is_key_pressed(KEY_D):
-		rotate_side(CubeSide.BOTTOM, cube_size - 1, false)
-	elif Input.is_key_pressed(KEY_L):
-		rotate_side(CubeSide.RIGHT, cube_size - 1, true)
-	elif Input.is_key_pressed(KEY_B):
-		rotate_side(CubeSide.BACK, 1, false)
-	# Handling for rotating different layers
-	elif Input.is_key_pressed(KEY_1):
-		rotate_side(CubeSide.LEFT, 0, true)
+	if is_rotating:
+		return
+	if Input.is_key_pressed(KEY_1):
+		rotate_side(CubeSide.BOTTOM, 0, 90)
+	elif Input.is_key_pressed(KEY_Q):
+		rotate_side(CubeSide.BOTTOM, 0, -90)
 	elif Input.is_key_pressed(KEY_2):
-		rotate_side(CubeSide.LEFT, 1, true)
+		rotate_side(CubeSide.BOTTOM, 1, 90)
+	elif Input.is_key_pressed(KEY_W):
+		rotate_side(CubeSide.BOTTOM, 1, -90)
 	elif Input.is_key_pressed(KEY_3):
-		rotate_side(CubeSide.LEFT, 2, true)
-		
+		rotate_side(CubeSide.BOTTOM, 2, 90)
+	elif Input.is_key_pressed(KEY_E):
+		rotate_side(CubeSide.BOTTOM, 2, -90)
+	if Input.is_key_pressed(KEY_4):
+		rotate_side(CubeSide.LEFT, 0, 90)
+	elif Input.is_key_pressed(KEY_R):
+		rotate_side(CubeSide.LEFT, 0, -90)
+	elif Input.is_key_pressed(KEY_5):
+		rotate_side(CubeSide.LEFT, 1, 90)
+	elif Input.is_key_pressed(KEY_T):
+		rotate_side(CubeSide.LEFT, 1, -90)
+	elif Input.is_key_pressed(KEY_6):
+		rotate_side(CubeSide.LEFT, 2, 90)
+	elif Input.is_key_pressed(KEY_Y):
+		rotate_side(CubeSide.LEFT, 2, -90)
+	
+func rotate_side(side, layer, angle):
+	is_rotating = true
+	if current_rotation_group:
+			disband_rotation_group(current_rotation_group)
+	current_rotation_group = create_rotation_group(side, layer)
+	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
+	update_cube_pieces(side, layer, angle)
+	
+func get_rotation_axis(side: CubeSide):
+	match side:
+		CubeSide.RIGHT, CubeSide.LEFT:
+			return AXIS_X
+		CubeSide.TOP, CubeSide.BOTTOM:
+			return AXIS_Y
+		CubeSide.FRONT, CubeSide.BACK:
+			return AXIS_Z
+
 func create_cube(size):
 	# Center the cube on the scene
+	cube_pieces = []
+	for x in range(size):
+		var layer = []  # Create a new layer
+		for y in range(size):
+			var row = []  # Create a new row in the current layer
+			for z in range(size):
+				row.append(null)  # Initialize each cell in the row
+			layer.append(row)  # Add the row to the current layer
+		cube_pieces.append(layer)  # Add the layer to the cube
+
 	var offset = (size - 1) / 2.0
 	# Dynamically create cube of given size
 	for x in range(size):
@@ -47,103 +93,192 @@ func create_cube(size):
 					piece.transform.origin = position
 					# Add piece as a child of big cube
 					add_child(piece)
+					cube_pieces[x][y][z] = piece
+					# Hide unseen faces
+					piece.get_child(CubeSide.TOP).visible = y == size - 1
+					piece.get_child(CubeSide.BOTTOM).visible = y == 0
+					piece.get_child(CubeSide.LEFT).visible = x == 0
+					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
+					piece.get_child(CubeSide.BACK).visible = z == 0
+					piece.get_child(CubeSide.FRONT).visible = z == size - 1
 
 
-func get_side_pieces(side, layer):
+func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
-	var middle = cube_size / 2
-	var half_size = (cube_size - 1) / 2.0
-	for piece in get_children():
-		if piece is CSGBox3D:
-			var position = piece.transform.origin
-			match side:
-				CubeSide.FRONT:
-					if cube_size % 2 == 0 and (position.z == half_size or position.z == -half_size):
-						if layer == 0 and position.z == -half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.z == half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.z == -layer:
-						pieces.append(piece)
-				CubeSide.BACK:
-					if cube_size % 2 == 0 and (position.z == half_size or position.z == -half_size):
-						if layer == 0 and position.z == half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.z == -half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.z == layer:
-						pieces.append(piece)
-				CubeSide.LEFT:
-					if cube_size % 2 == 0 and (position.x == half_size or position.x == -half_size):
-						if layer == 0 and position.x == -half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.x == half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.x == -layer:
-						pieces.append(piece)
-				CubeSide.RIGHT:
-					if cube_size % 2 == 0 and (position.x == half_size or position.x == -half_size):
-						if layer == 0 and position.x == half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.x == -half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.x == layer:
-						pieces.append(piece)
-				CubeSide.TOP:
-					if cube_size % 2 == 0 and (position.y == half_size or position.y == -half_size):
-						if layer == 0 and position.y == half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.y == -half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.y == layer:
-						pieces.append(piece)
-				CubeSide.BOTTOM:
-					if cube_size % 2 == 0 and (position.y == half_size or position.y == -half_size):
-						if layer == 0 and position.y == -half_size:
-							pieces.append(piece)
-						elif layer == 1 and position.y == half_size:
-							pieces.append(piece)
-					elif cube_size % 2 == 1 and position.y == -layer:
-						pieces.append(piece)
-	return pieces
-			
-func rotate_side(side, layer, clockwise):
-	var angle = -PI / 2 if clockwise else PI / 2
-	var rotation_axis = Vector3()
-	var rotation_center = Vector3()
-
-	# Determine the axis and center of rotation based on the side
+	var size = cube_pieces.size()
+	var positions = []
 	match side:
-		CubeSide.FRONT:
-			rotation_axis = Vector3(0, 0, 1)
-			rotation_center = Vector3(0, 0, -layer)
-		CubeSide.BACK:
-			rotation_axis = Vector3(0, 0, -1)
-			rotation_center = Vector3(0, 0, layer)
-		CubeSide.LEFT:
-			rotation_axis = Vector3(1, 0, 0)
-			rotation_center = Vector3(-layer, 0, 0)
-		CubeSide.RIGHT:
-			rotation_axis = Vector3(-1, 0, 0)
-			rotation_center = Vector3(layer, 0, 0)
 		CubeSide.TOP:
-			rotation_axis = Vector3(0, 1, 0)
-			rotation_center = Vector3(0, layer, 0)
+			for x in range(size):
+				for z in range(size):
+					if cube_pieces[x][size - 1 - layer][z] != null:
+						pieces.append(cube_pieces[x][size - 1 - layer][z])
+						positions.append([x, size-1-layer, z])
 		CubeSide.BOTTOM:
-			rotation_axis = Vector3(0, -1, 0)
-			rotation_center = Vector3(0, -layer, 0)
+			for x in range(size):
+				for z in range(size):
+					if cube_pieces[x][layer][z] != null:
+						pieces.append(cube_pieces[x][layer][z])
+						positions.append([x, layer, z])
+		CubeSide.LEFT:
+			for y in range(size):
+				for z in range(size):
+					if cube_pieces[layer][y][z] != null:
+						pieces.append(cube_pieces[layer][y][z])
+						positions.append([layer, y, z])
+		CubeSide.RIGHT:
+			for y in range(size):
+				for z in range(size):
+					if cube_pieces[size - 1 - layer][y][z] != null:
+						pieces.append(cube_pieces[size - 1 - layer][y][z])
+						positions.append([size-1-layer, y, z])
+		CubeSide.FRONT:
+			for x in range(size):
+				for y in range(size):
+					if cube_pieces[x][y][layer] != null:
+						pieces.append(cube_pieces[x][y][layer])
+						positions.append([x, y, layer])
+						
+		CubeSide.BACK:
+			for x in range(size):
+				for y in range(size):
+					if cube_pieces[x][y][size - 1 - layer] != null:
+						pieces.append(cube_pieces[x][y][size - 1 - layer])
+						positions.append([x, y, size - 1 - layer])
 
-	# Get the pieces for the specified side
-	var pieces = get_side_pieces(side, layer)
+	return [pieces, positions]
+
+func create_rotation_group(side, layer) -> Node3D:
+	var rotation_group = Node3D.new()
+	rotation_group.name = "RotationGroup"
+	add_child(rotation_group)
+
+	var pieces_on_side = get_pieces_on_side(side, layer)
+	var pieces_to_rotate = pieces_on_side[0]
+	var pieces_positions = pieces_on_side[1]
+	#print(pieces_to_rotate)
+	#var positions_after_rotation = rotate_layer_clockwise(pieces_positions, cube_size)
+	#var reversed_positions = rotate_layer_counterclockwise(positions_after_rotation, cube_size)
+	for piece in pieces_to_rotate:
+		piece.get_parent().remove_child(piece)
+		rotation_group.add_child(piece)
+
+	return rotation_group
 	
-	for piece in pieces:
-		# Convert global position to local position
-		var local_position = global_transform.affine_inverse() * piece.global_transform.origin
-		# Calculate the rotated position
-		var new_local_pos = (local_position - rotation_center).rotated(rotation_axis, angle) + rotation_center
-		# Convert the new local position back to global position and apply it
-		piece.global_transform.origin = global_transform * new_local_pos
-		# Apply rotation to piece
-		piece.rotate_object_local(rotation_axis, angle)
+func update_cube_pieces(side: CubeSide, layer: int, angle: int):
+	var pieces_on_side = get_pieces_on_side(side, layer)
+	var pieces_to_rotate = pieces_on_side[0]
+	var pieces_positions = pieces_on_side[1]
 
+	var new_positions
+	match angle:
+		90:
+			new_positions = rotate_layer_clockwise(pieces_positions, cube_size, side)
+		-90:
+			new_positions = rotate_layer_counterclockwise(pieces_positions, cube_size, side)
 
+	# Create a dictionary to map old positions to new pieces
+	var position_to_piece = {}
+	for i in range(pieces_to_rotate.size()):
+		var old_pos = pieces_positions[i]
+		var new_piece = pieces_to_rotate[i]
+		position_to_piece[old_pos] = new_piece
+
+	# Update the cube_pieces array
+	for i in range(new_positions.size()):
+		var new_pos = new_positions[i]
+		var old_pos = pieces_positions[i]
+		var new_piece = position_to_piece[old_pos]
+		cube_pieces[new_pos[0]][new_pos[1]][new_pos[2]] = new_piece
+
+func rotate_layer_clockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	var rotated_layer = []
+
+	for position in layer:
+		var x = position[0]
+		var y = position[1]
+		var z = position[2]
+
+		var new_x
+		var new_y
+		var new_z
+		match side:
+			# Handle horizontal rotation (bottom or top)
+			CubeSide.BOTTOM, CubeSide.TOP:
+				new_x = z
+				new_y = y  # y remains the same for horizontal rotation
+				new_z = size - 1 - x
+
+			# Handle vertical rotation (left or right)
+			CubeSide.LEFT, CubeSide.RIGHT:
+				new_x = x  # x remains the same for vertical rotation
+				new_y = size - 1 - z
+				new_z = y
+
+		rotated_layer.append(Vector3(new_x, new_y, new_z))
+
+	return rotated_layer
+
+func rotate_layer_counterclockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	var rotated_layer = []
+
+	for position in layer:
+		var x = position[0]
+		var y = position[1]
+		var z = position[2]
+
+		var new_x
+		var new_y
+		var new_z
+		match side:
+			# Handle horizontal rotation (bottom or top)
+			CubeSide.BOTTOM, CubeSide.TOP:
+				new_x = size - 1 - z
+				new_y = y  # y remains the same for horizontal rotation
+				new_z = x
+
+			# Handle vertical rotation (left or right)
+			CubeSide.LEFT, CubeSide.RIGHT:
+				new_x = x  # x remains the same for vertical rotation
+				new_y = z
+				new_z = size - 1 - y
+
+		rotated_layer.append(Vector3(new_x, new_y, new_z))
+
+	return rotated_layer
+
+func disband_rotation_group(rotation_group: Node3D):
+	# Get the global transform of the rotation group
+	var group_global_transform = rotation_group.global_transform
+
+	while rotation_group.get_child_count() > 0:
+		var piece = rotation_group.get_child(0)
+		rotation_group.remove_child(piece)
+
+		# Calculate the new local transform for the piece
+		var new_local_transform = group_global_transform * piece.transform
+		piece.global_transform = new_local_transform
+
+		# Reparent the piece to the main cube node
+		add_child(piece)
+
+	# Remove the rotation group from the scene tree
+	rotation_group.queue_free()
+	
+func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.3):
+	var tween = get_tree().create_tween()
+	var start_rotation = rotation_group.rotation_degrees
+	var end_rotation = start_rotation + axis * angle_degrees
+
+	tween.tween_property(rotation_group, "rotation_degrees", end_rotation, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+
+	tween.play()
+
+	# Updated connection using Signal.connect() and Callable.bind()
+	tween.finished.connect(_on_tween_finished.bind(rotation_group))
+
+func _on_tween_finished(rotation_group):
+	disband_rotation_group(rotation_group)
+	current_rotation_group = null
+	is_rotating = false
+	
