@@ -4,7 +4,9 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 3
+@export var cube_size = 2
+@export var rotation_speed = 0.3
+@export var animate = true
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
@@ -21,7 +23,7 @@ var cube_pieces = Array()
 var is_rotating = false
 
 func _ready():
-	create_cube(cube_size) 
+	create_cube(cube_size)
 	
 func _input(delta):
 	if is_rotating:
@@ -69,7 +71,7 @@ func get_rotation_axis(side: CubeSide):
 			return AXIS_Z
 
 func create_cube(size):
-	# Center the cube on the scene
+	# Prepare an array for storing cube's state
 	cube_pieces = []
 	for x in range(size):
 		var layer = []  # Create a new layer
@@ -80,6 +82,7 @@ func create_cube(size):
 			layer.append(row)  # Add the row to the current layer
 		cube_pieces.append(layer)  # Add the layer to the cube
 
+	# Center the cube on the scene
 	var offset = (size - 1) / 2.0
 	# Dynamically create cube of given size
 	for x in range(size):
@@ -99,9 +102,8 @@ func create_cube(size):
 					piece.get_child(CubeSide.BOTTOM).visible = y == 0
 					piece.get_child(CubeSide.LEFT).visible = x == 0
 					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
-					piece.get_child(CubeSide.BACK).visible = z == 0
-					piece.get_child(CubeSide.FRONT).visible = z == size - 1
-
+					piece.get_child(CubeSide.FRONT).visible = z == 0
+					piece.get_child(CubeSide.BACK).visible = z == size - 1
 
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
@@ -265,17 +267,20 @@ func disband_rotation_group(rotation_group: Node3D):
 	# Remove the rotation group from the scene tree
 	rotation_group.queue_free()
 	
-func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.3):
-	var tween = get_tree().create_tween()
+func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = rotation_speed):
 	var start_rotation = rotation_group.rotation_degrees
 	var end_rotation = start_rotation + axis * angle_degrees
 
-	tween.tween_property(rotation_group, "rotation_degrees", end_rotation, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-
-	tween.play()
-
-	# Updated connection using Signal.connect() and Callable.bind()
-	tween.finished.connect(_on_tween_finished.bind(rotation_group))
+	if animate:
+		var tween = get_tree().create_tween()
+		tween.tween_property(rotation_group, "rotation_degrees", end_rotation, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		tween.play()
+		tween.finished.connect(_on_tween_finished.bind(rotation_group))
+	else:
+		rotation_group.rotation_degrees = end_rotation
+		disband_rotation_group(rotation_group)
+		current_rotation_group = null
+		is_rotating = false
 
 func _on_tween_finished(rotation_group):
 	disband_rotation_group(rotation_group)

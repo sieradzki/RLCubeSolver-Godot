@@ -5,6 +5,9 @@
 
 [node name="Cube" type="Node3D"]
 script = ExtResource("1_50r07")
+cube_size = 3
+rotation_speed = 0.1
+animate = false
 
 [node name="CameraPivot" type="Node3D" parent="."]
 script = ExtResource("2_vgpil")
