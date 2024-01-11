@@ -4,7 +4,7 @@ extends Node3D
 # Preload the small piece
 var piece_scene = preload("res://CubeEnv/Piece.tscn")
 
-@export var cube_size = 3
+@export var cube_size = 5
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
 
@@ -15,8 +15,10 @@ const AXIS_Z = Vector3(0, 0, 1)
 var current_rotation_group: Node3D = null
 
 var cube_pieces = Array()
+
 func _ready():
 	create_cube(cube_size) 
+	#print(cube_pieces)
 	
 func _input(delta):
 	if Input.is_key_pressed(KEY_1):
@@ -49,6 +51,7 @@ func rotate_side(side, layer, angle):
 			disband_rotation_group(current_rotation_group)
 	current_rotation_group = create_rotation_group(side, layer)
 	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
+	update_cube_pieces(side, layer, angle)
 	
 func get_rotation_axis(side: CubeSide):
 	match side:
@@ -97,52 +100,158 @@ func create_cube(size):
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
 	var size = cube_pieces.size()
-
+	var positions = []
 	match side:
 		CubeSide.TOP:
 			for x in range(size):
 				for z in range(size):
 					if cube_pieces[x][size - 1 - layer][z] != null:
 						pieces.append(cube_pieces[x][size - 1 - layer][z])
+						positions.append([x, size-1-layer, z])
 		CubeSide.BOTTOM:
 			for x in range(size):
 				for z in range(size):
 					if cube_pieces[x][layer][z] != null:
 						pieces.append(cube_pieces[x][layer][z])
+						positions.append([x, layer, z])
 		CubeSide.LEFT:
 			for y in range(size):
 				for z in range(size):
 					if cube_pieces[layer][y][z] != null:
 						pieces.append(cube_pieces[layer][y][z])
+						positions.append([layer, y, z])
 		CubeSide.RIGHT:
 			for y in range(size):
 				for z in range(size):
 					if cube_pieces[size - 1 - layer][y][z] != null:
 						pieces.append(cube_pieces[size - 1 - layer][y][z])
+						positions.append([size-1-layer, y, z])
 		CubeSide.FRONT:
 			for x in range(size):
 				for y in range(size):
 					if cube_pieces[x][y][layer] != null:
 						pieces.append(cube_pieces[x][y][layer])
+						positions.append([x, y, layer])
+						
 		CubeSide.BACK:
 			for x in range(size):
 				for y in range(size):
 					if cube_pieces[x][y][size - 1 - layer] != null:
 						pieces.append(cube_pieces[x][y][size - 1 - layer])
+						positions.append([x, y, size - 1 - layer])
 
-	return pieces
+	return [pieces, positions]
 
 func create_rotation_group(side, layer) -> Node3D:
 	var rotation_group = Node3D.new()
 	rotation_group.name = "RotationGroup"
 	add_child(rotation_group)
 
-	var pieces_to_rotate = get_pieces_on_side(side, layer)
+	var pieces_on_side = get_pieces_on_side(side, layer)
+	var pieces_to_rotate = pieces_on_side[0]
+	var pieces_positions = pieces_on_side[1]
+	#print(pieces_to_rotate)
+	#var positions_after_rotation = rotate_layer_clockwise(pieces_positions, cube_size)
+	#var reversed_positions = rotate_layer_counterclockwise(positions_after_rotation, cube_size)
 	for piece in pieces_to_rotate:
 		piece.get_parent().remove_child(piece)
 		rotation_group.add_child(piece)
 
 	return rotation_group
+	
+func update_cube_pieces(side: CubeSide, layer: int, angle: int):
+	print("before")
+	print(cube_pieces)
+
+	var pieces_on_side = get_pieces_on_side(side, layer)
+	var pieces_to_rotate = pieces_on_side[0]
+	var pieces_positions = pieces_on_side[1]
+	print("pieces_to_rotate")
+	print(pieces_to_rotate)
+	print("pieces_positions")
+	print(pieces_positions)
+
+	var new_positions
+	match angle:
+		90:
+			new_positions = rotate_layer_clockwise(pieces_positions, cube_size, side)
+		-90:
+			new_positions = rotate_layer_counterclockwise(pieces_positions, cube_size, side)
+
+	print("new_positions")
+	print(new_positions)
+	# Create a dictionary to map old positions to new pieces
+	var position_to_piece = {}
+	for i in range(pieces_to_rotate.size()):
+		var old_pos = pieces_positions[i]
+		var new_piece = pieces_to_rotate[i]
+		position_to_piece[old_pos] = new_piece
+
+	# Update the cube_pieces array
+	for i in range(new_positions.size()):
+		var new_pos = new_positions[i]
+		var old_pos = pieces_positions[i]
+		var new_piece = position_to_piece[old_pos]
+		cube_pieces[new_pos[0]][new_pos[1]][new_pos[2]] = new_piece
+
+	print("after")
+	print(cube_pieces)
+	
+func rotate_layer_clockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	var rotated_layer = []
+
+	for position in layer:
+		var x = position[0]
+		var y = position[1]
+		var z = position[2]
+
+		var new_x
+		var new_y
+		var new_z
+		match side:
+			# Handle horizontal rotation (bottom or top)
+			CubeSide.BOTTOM, CubeSide.TOP:
+				new_x = z
+				new_y = y  # y remains the same for horizontal rotation
+				new_z = size - 1 - x
+
+			# Handle vertical rotation (left or right)
+			CubeSide.LEFT, CubeSide.RIGHT:
+				new_x = x  # x remains the same for vertical rotation
+				new_y = size - 1 - z
+				new_z = y
+
+		rotated_layer.append(Vector3(new_x, new_y, new_z))
+
+	return rotated_layer
+
+func rotate_layer_counterclockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	var rotated_layer = []
+
+	for position in layer:
+		var x = position[0]
+		var y = position[1]
+		var z = position[2]
+
+		var new_x
+		var new_y
+		var new_z
+		match side:
+			# Handle horizontal rotation (bottom or top)
+			CubeSide.BOTTOM, CubeSide.TOP:
+				new_x = size - 1 - z
+				new_y = y  # y remains the same for horizontal rotation
+				new_z = x
+
+			# Handle vertical rotation (left or right)
+			CubeSide.LEFT, CubeSide.RIGHT:
+				new_x = x  # x remains the same for vertical rotation
+				new_y = z
+				new_z = size - 1 - y
+
+		rotated_layer.append(Vector3(new_x, new_y, new_z))
+
+	return rotated_layer
 
 func disband_rotation_group(rotation_group: Node3D):
 	# Get the global transform of the rotation group
@@ -162,7 +271,7 @@ func disband_rotation_group(rotation_group: Node3D):
 	# Remove the rotation group from the scene tree
 	rotation_group.queue_free()
 	
-func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.3):
+func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = 0.1):
 	var tween = get_tree().create_tween()
 	var start_rotation = rotation_group.rotation_degrees
 	var end_rotation = start_rotation + axis * angle_degrees
