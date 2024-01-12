@@ -9,6 +9,7 @@ var piece_scene = preload("res://CubeEnv/Piece.tscn")
 @export var animate = true
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
+enum FaceColor { WHITE, YELLOW, GREEN, BLUE, ORANGE, RED}
 
 # Rotation axes
 const AXIS_X = Vector3(1, 0, 0)
@@ -19,7 +20,7 @@ var current_rotation_group: Node3D = null
 
 # For storing cube's pieces state
 var cube_pieces = Array()
-
+var cube_state
 var is_rotating = false
 
 func _ready():
@@ -70,7 +71,26 @@ func get_rotation_axis(side: CubeSide):
 		CubeSide.FRONT, CubeSide.BACK:
 			return AXIS_Z
 
+func init_face(color, size):
+	var face = []
+	for y in range(size):
+		var row = []
+		for x in range(size):
+			row.append(color)
+		face.append(row)
+	return face
+
 func create_cube(size):
+	# Initialize the cube state for each face
+	cube_state = [
+		init_face(FaceColor.WHITE, size), 
+		init_face(FaceColor.YELLOW, size),
+		init_face(FaceColor.GREEN, size),
+		init_face(FaceColor.BLUE, size),
+		init_face(FaceColor.ORANGE, size),
+		init_face(FaceColor.RED, size)
+	]
+	
 	# Prepare an array for storing cube's state
 	cube_pieces = []
 	for x in range(size):
@@ -104,6 +124,12 @@ func create_cube(size):
 					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
 					piece.get_child(CubeSide.FRONT).visible = z == 0
 					piece.get_child(CubeSide.BACK).visible = z == size - 1
+
+#func get_cube_state() -> Array:
+	#var state = Array()
+	#for side in range(6):
+		#var side_pieces = get_pieces_on_side(side, 0)
+	#return state
 
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
