@@ -20,11 +20,18 @@ var current_rotation_group: Node3D = null
 
 # For storing cube's pieces state
 var cube_pieces = Array()
-var cube_state
+var original_faces
+var original_positions
 var is_rotating = false
 
 func _ready():
 	create_cube(cube_size)
+	var ret = get_initial_faces_and_positions()
+	original_faces = ret[0]
+	original_positions = ret[1]
+	print_faces(original_faces)
+	print(original_positions)
+	#print(cube_pieces)
 	
 func _input(delta):
 	if is_rotating:
@@ -61,6 +68,7 @@ func rotate_side(side, layer, angle):
 	current_rotation_group = create_rotation_group(side, layer)
 	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
 	update_cube_pieces(side, layer, angle)
+	print(get_initial_faces_and_positions())
 	
 func get_rotation_axis(side: CubeSide):
 	match side:
@@ -81,16 +89,6 @@ func init_face(color, size):
 	return face
 
 func create_cube(size):
-	# Initialize the cube state for each face
-	cube_state = [
-		init_face(FaceColor.WHITE, size), 
-		init_face(FaceColor.YELLOW, size),
-		init_face(FaceColor.GREEN, size),
-		init_face(FaceColor.BLUE, size),
-		init_face(FaceColor.ORANGE, size),
-		init_face(FaceColor.RED, size)
-	]
-	
 	# Prepare an array for storing cube's state
 	cube_pieces = []
 	for x in range(size):
@@ -125,12 +123,51 @@ func create_cube(size):
 					piece.get_child(CubeSide.FRONT).visible = z == 0
 					piece.get_child(CubeSide.BACK).visible = z == size - 1
 
-#func get_cube_state() -> Array:
-	#var state = Array()
-	#for side in range(6):
-		#var side_pieces = get_pieces_on_side(side, 0)
-	#return state
+func get_cube_state() -> Array:
+	var state = Array()
+	for side in range(6):
+		var side_pieces = get_pieces_on_side(side, 0)
+	return state
+	
+func get_initial_faces_and_positions():
+	var all_faces = []
+	var all_positions = []
+	
+	for side_index in range(6): # 6 faces of the cube
+		var faces_on_side = []
+		var positions_on_side = []
 
+		var side_pieces_info = get_pieces_on_side(side_index, 0)
+		var pieces_on_side = side_pieces_info[0]
+
+		for piece in pieces_on_side:
+			for child_index in range(piece.get_children().size()):
+				var face = piece.get_child(child_index)
+
+				# Check if face is on the current side and visible
+				if child_index == side_index and face.visible:
+					faces_on_side.append(face)
+					positions_on_side.append(round_vector(face.get_global_position()))
+
+		all_positions.append(positions_on_side)
+		all_faces.append(faces_on_side)
+
+	return [all_faces, all_positions]
+
+# Helper function to round vector components
+func round_vector(vector):
+	return Vector3(snapped(vector.x, 0.001), snapped(vector.y, 0.001), snapped(vector.z, 0.001))
+
+func get_piece_face_position(piece):
+	return
+				
+func print_faces(faces):
+	for side in faces:
+		var row = []
+		for face in side:
+			row.append(face.name)
+		print(row)
+		
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
 	var size = cube_pieces.size()
@@ -183,7 +220,6 @@ func create_rotation_group(side, layer) -> Node3D:
 
 	var pieces_on_side = get_pieces_on_side(side, layer)
 	var pieces_to_rotate = pieces_on_side[0]
-	var pieces_positions = pieces_on_side[1]
 	#print(pieces_to_rotate)
 	#var positions_after_rotation = rotate_layer_clockwise(pieces_positions, cube_size)
 	#var reversed_positions = rotate_layer_counterclockwise(positions_after_rotation, cube_size)
