@@ -9,6 +9,7 @@ var piece_scene = preload("res://CubeEnv/Piece.tscn")
 @export var animate = true
 
 enum CubeSide { TOP, BOTTOM, LEFT, RIGHT, FRONT, BACK }
+enum FaceColor { WHITE, YELLOW, GREEN, BLUE, ORANGE, RED}
 
 # Rotation axes
 const AXIS_X = Vector3(1, 0, 0)
@@ -17,13 +18,15 @@ const AXIS_Z = Vector3(0, 0, 1)
 
 var current_rotation_group: Node3D = null
 
-# For storing cube's pieces state
+# For storing cube's pieces state - necessary for rotation
 var cube_pieces = Array()
-
+# For storing face colors of each side 
+var cube_state
 var is_rotating = false
 
 func _ready():
 	create_cube(cube_size)
+	print(cube_state)
 	
 func _input(delta):
 	if is_rotating:
@@ -70,7 +73,25 @@ func get_rotation_axis(side: CubeSide):
 		CubeSide.FRONT, CubeSide.BACK:
 			return AXIS_Z
 
+func init_face(color, size):
+	var face = []
+	for y in range(size):
+		var row = []
+		for x in range(size):
+			row.append(color)
+		face.append(row)
+	return face
+
 func create_cube(size):
+	# Initialize the cube state for each face
+	cube_state = [
+		init_face(FaceColor.WHITE, size), 
+		init_face(FaceColor.YELLOW, size),
+		init_face(FaceColor.GREEN, size),
+		init_face(FaceColor.BLUE, size),
+		init_face(FaceColor.ORANGE, size),
+		init_face(FaceColor.RED, size)
+	]
 	# Prepare an array for storing cube's state
 	cube_pieces = []
 	for x in range(size):
@@ -104,6 +125,88 @@ func create_cube(size):
 					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
 					piece.get_child(CubeSide.FRONT).visible = z == 0
 					piece.get_child(CubeSide.BACK).visible = z == size - 1
+					
+""" This could be done a lot easier if I could determine cube's state 
+	based on piece's visible faces on side or something but I can't 
+	so we're doing algebra :/ (might rewrite later if I have the time ok)
+"""
+
+""" On the other hand if graphics is too heavy on resources we can just use this
+	because it's not related to 'actual' state of the cube at all :)
+	(we do follow the rotations so technically it matches, it just doesn't 
+	depend on it)
+"""
+
+func rotate_face(face: Array, clockwise: bool = true) -> Array:
+	var N: int = face.size()
+	var rotated_face: Array = Array()
+	for i in range(N):
+		var row: Array = Array()
+		for j in range(N):
+			if clockwise:
+				row.append(face[j][N - 1 - i])
+			else:  # counterclockwise
+				row.append(face[N - 1 - j][i])
+		rotated_face.append(row)
+	return rotated_face
+
+func rotate_edges(cube: Array, face_index: int, layer: int, clockwise: bool) -> void:
+	var N: int = cube[0].size()
+
+	# Mapping of face index to its adjacent faces (in clockwise order)
+	var adjacent_faces: Dictionary = {
+		0: [[2, -1, true], [4, layer, true], [3, 0, false], [5, N - 1 - layer, false]],  # Front
+		1: [[3, -1, true], [4, N - 1 - layer, false], [2, 0, false], [5, layer, true]],  # Back
+		2: [[1, -1, true], [4, 0, true], [0, 0, true], [5, 0, false]],  # Left
+		3: [[0, -1, true], [4, N - 1, false], [1, 0, true], [5, N - 1, true]],  # Right
+		4: [[0, 0, true], [3, 0, true], [1, 0, false], [2, 0, false]],  # Up
+		5: [[0, N - 1, false], [2, N - 1, true], [1, N - 1, true], [3, N - 1, false]]   # Down
+	}
+	if face_index in [4, 5]:  # Up or Down face
+		layer = N - 1 if face_index == 5 else 0
+
+	var edges: Array = Array()
+	for adj in adjacent_faces[face_index]:
+		var adj_face: int = adj[0]
+		var adj_layer: int = adj[1]
+		var adj_clockwise: bool = adj[2]
+		if adj_layer == -1:
+			adj_layer = layer if adj_face in [0, 1] else (0 if clockwise else N - 1)
+		var edge: Array = Array()
+		if adj_face in [0, 1]:
+			for i in range(N):
+				edge.append(cube[adj_face][i][adj_layer])
+		else:
+			edge = cube[adj_face][adj_layer]
+		if not adj_clockwise:
+			edge.reverse()
+		edges.append([adj_face, adj_layer, edge])
+
+	for i in range(4):
+		var next_edge = edges[(i + 1) % 4]
+		var next_face: int = next_edge[0]
+		var next_layer: int = next_edge[1]
+		var next_edge_values: Array = next_edge[2]
+		if next_face in [0, 1]:
+			for j in range(N):
+				cube[next_face][j][next_layer] = edges[i][2][j]
+		else:
+			cube[next_face][next_layer] = edges[i][2]
+
+func rotate_cube(cube: Array, side: int, layer: int, angle) -> Array:
+	var clockwise: bool = angle == 90
+	print(clockwise)
+
+	# Rotate the face itself if it's the outermost layer
+	if (side in [0, 1] and (layer == 0 or layer == cube[0].size() - 1)) or \
+	   (side in [2, 3, 4, 5] and layer == 0):
+		cube[side] = rotate_face(cube[side], clockwise)
+
+	# Rotate the edges of the adjacent faces
+	rotate_edges(cube, side, layer, clockwise)
+
+	return cube
+""" End of evil algebra """
 
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
@@ -192,6 +295,11 @@ func update_cube_pieces(side: CubeSide, layer: int, angle: int):
 		var old_pos = pieces_positions[i]
 		var new_piece = position_to_piece[old_pos]
 		cube_pieces[new_pos[0]][new_pos[1]][new_pos[2]] = new_piece
+	
+	# Also update cube state (colors on each face)
+	var new_state = rotate_cube(cube_state, side, layer, angle)
+	cube_state = new_state.duplicate()
+	print(cube_state)
 
 func rotate_layer_clockwise(layer: Array, size: int, side: CubeSide) -> Array:
 	var rotated_layer = []
