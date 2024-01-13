@@ -28,6 +28,8 @@ var current_positions # current face positions
 
 var is_rotating = false
 
+var rng = RandomNumberGenerator.new()
+
 func _ready():
 	create_cube(cube_size)
 	var ret = get_initial_faces_and_positions()
@@ -38,17 +40,17 @@ func _input(delta):
 	if is_rotating:
 		return
 	if Input.is_key_pressed(KEY_1):
-		rotate_side(CubeSide.BOTTOM, 0, 90)
+		scramble_cube(10)
 	elif Input.is_key_pressed(KEY_Q):
-		rotate_side(CubeSide.BOTTOM, 0, -90)
+		rotate_side(CubeSide.TOP, 0, -90)
 	elif Input.is_key_pressed(KEY_2):
-		rotate_side(CubeSide.BOTTOM, 1, 90)
+		rotate_side(CubeSide.TOP, 1, 90)
 	elif Input.is_key_pressed(KEY_W):
-		rotate_side(CubeSide.BOTTOM, 1, -90)
+		rotate_side(CubeSide.TOP, 1, -90)
 	elif Input.is_key_pressed(KEY_3):
-		rotate_side(CubeSide.BOTTOM, 2, 90)
+		rotate_side(CubeSide.TOP, 2, 90)
 	elif Input.is_key_pressed(KEY_E):
-		rotate_side(CubeSide.BOTTOM, 2, -90)
+		rotate_side(CubeSide.TOP, 2, -90)
 	if Input.is_key_pressed(KEY_4):
 		rotate_side(CubeSide.LEFT, 0, 90)
 	elif Input.is_key_pressed(KEY_R):
@@ -122,6 +124,26 @@ func create_cube(size):
 					piece.get_child(CubeSide.RIGHT).visible = x == size - 1
 					piece.get_child(CubeSide.FRONT).visible = z == 0
 					piece.get_child(CubeSide.BACK).visible = z == size - 1
+				
+func scramble_cube(min_rotations=10):
+	rng.randomize() 
+
+	var num_rotations = rng.randi_range(min_rotations, min_rotations + 10)
+
+	for i in range(num_rotations):
+		var side = rng.randi_range(0, 1)
+		if side:
+			side = CubeSide.BOTTOM
+		else:
+			side = CubeSide.LEFT
+		var layer = rng.randi_range(0, cube_size - 1)
+		var angle = rng.randi_range(0, 1)
+		if angle:
+			angle = 90
+		else:
+			angle = -90
+
+		rotate_side(side, layer, angle)
 
 func get_cube_state() -> Array:
 	var state = Array()
@@ -177,7 +199,7 @@ func print_faces(faces):
 		for face in side:
 			row.append(face.name)
 		print(row)
-		
+	
 func update_cube_state():
 	pass
 
@@ -358,16 +380,16 @@ func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, d
 		is_rotating = false
 		prev_positions = current_positions
 		current_positions = get_faces_positions(cube_faces)
-		update_cube_state()
+		#update_cube_state()
 
 func _on_tween_finished(rotation_group):
 	disband_rotation_group(rotation_group)
 	current_rotation_group = null
 	is_rotating = false
-	prev_positions = current_positions
-	current_positions = get_faces_positions(cube_faces)
-	#print(prev_positions)
-	#print(current_positions)
+	prev_positions = current_positions.duplicate(true)
+	current_positions = get_faces_positions(cube_faces).duplicate(true)
+	print(prev_positions)
+	print(current_positions)
 	update_cube_state()
 	print(cube_state)
 	

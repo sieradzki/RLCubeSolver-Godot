@@ -14,7 +14,3 @@ config/name="CubeEnvironment"
 run/main_scene="res://CubeEnv/Cube.tscn"
 config/features=PackedStringArray("4.2", "Forward Plus")
 config/icon="res://icon.svg"
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/godot_vim/plugin.cfg")
