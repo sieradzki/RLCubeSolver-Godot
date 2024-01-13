@@ -20,18 +20,19 @@ var current_rotation_group: Node3D = null
 
 # For storing cube's pieces state
 var cube_pieces = Array()
-var original_faces
-var original_positions
+var cube_faces # face objects
+var cube_state = [] # colors on each side
+
+var prev_positions # previous face positions
+var current_positions # current face positions
+
 var is_rotating = false
 
 func _ready():
 	create_cube(cube_size)
 	var ret = get_initial_faces_and_positions()
-	original_faces = ret[0]
-	original_positions = ret[1]
-	print_faces(original_faces)
-	print(original_positions)
-	#print(cube_pieces)
+	cube_faces = ret[0]
+	current_positions = ret[1]
 	
 func _input(delta):
 	if is_rotating:
@@ -68,7 +69,6 @@ func rotate_side(side, layer, angle):
 	current_rotation_group = create_rotation_group(side, layer)
 	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
 	update_cube_pieces(side, layer, angle)
-	print(get_initial_faces_and_positions())
 	
 func get_rotation_axis(side: CubeSide):
 	match side:
@@ -136,6 +136,7 @@ func get_initial_faces_and_positions():
 	for side_index in range(6): # 6 faces of the cube
 		var faces_on_side = []
 		var positions_on_side = []
+		var colors_on_side = []
 
 		var side_pieces_info = get_pieces_on_side(side_index, 0)
 		var pieces_on_side = side_pieces_info[0]
@@ -148,18 +149,27 @@ func get_initial_faces_and_positions():
 				if child_index == side_index and face.visible:
 					faces_on_side.append(face)
 					positions_on_side.append(round_vector(face.get_global_position()))
+					colors_on_side.append(child_index)
 
 		all_positions.append(positions_on_side)
 		all_faces.append(faces_on_side)
+		cube_state.append(colors_on_side)
 
 	return [all_faces, all_positions]
+	
+func get_faces_positions(faces):
+	var positions = []
+	for side in faces:
+		var side_faces = []
+		for face in side:
+			side_faces.append(round_vector(face.get_global_position()))
+		positions.append(side_faces)
+	return positions
 
 # Helper function to round vector components
 func round_vector(vector):
 	return Vector3(snapped(vector.x, 0.001), snapped(vector.y, 0.001), snapped(vector.z, 0.001))
 
-func get_piece_face_position(piece):
-	return
 				
 func print_faces(faces):
 	for side in faces:
@@ -168,6 +178,9 @@ func print_faces(faces):
 			row.append(face.name)
 		print(row)
 		
+func update_cube_state():
+	pass
+
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 	var pieces = []
 	var size = cube_pieces.size()
@@ -343,9 +356,18 @@ func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, d
 		disband_rotation_group(rotation_group)
 		current_rotation_group = null
 		is_rotating = false
+		prev_positions = current_positions
+		current_positions = get_faces_positions(cube_faces)
+		update_cube_state()
 
 func _on_tween_finished(rotation_group):
 	disband_rotation_group(rotation_group)
 	current_rotation_group = null
 	is_rotating = false
+	prev_positions = current_positions
+	current_positions = get_faces_positions(cube_faces)
+	#print(prev_positions)
+	#print(current_positions)
+	update_cube_state()
+	print(cube_state)
 	
