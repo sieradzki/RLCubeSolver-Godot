@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cyqnw6pevxkf3"]
+
+[ext_resource type="Script" path="res://CubeEnv/ServerNode.gd" id="1_empgj"]
+
+[node name="ServerNode" type="Node"]
+script = ExtResource("1_empgj")
