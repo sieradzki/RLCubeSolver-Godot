@@ -16,12 +16,14 @@ func _ready():
 
 	# Set up cube environment
 	reset_environment()
-
+	
 func reset_environment():
-	cube_instance.reset_cube()
+	cube_instance.reset_cube(false)
 
 func _input(delta):
 	""" Testing only """
 	if Input.is_key_pressed(KEY_0):
 		reset_environment()
+	elif Input.is_key_pressed(KEY_P):
+		print(cube_instance.is_solved())
 

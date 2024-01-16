@@ -55,7 +55,8 @@ func process_command(command: String) -> String:
 # Send notification that server is closing the connection
 func _notification(what):
 	if what == NOTIFICATION_PREDELETE:
-		close_client_connection(peer)
+		if peer:
+			close_client_connection(peer)
 
 func close_client_connection(peer):
 	var close_message = "close_connection"

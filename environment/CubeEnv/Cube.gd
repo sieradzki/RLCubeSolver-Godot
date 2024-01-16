@@ -108,7 +108,7 @@ func create_cube():
 	cube_faces = ret[0]
 	current_positions = ret[1]
 
-func reset_cube():
+func reset_cube(scramble=false):
 	print("Reseting environment...")
 	# Perform cleanup
 	for child in get_children():
@@ -121,8 +121,9 @@ func reset_cube():
 	var cube_state = [] # colors on each side
 	
 	create_cube()
-	print("Scrambling the cube...")
-	scramble_cube()
+	if scramble:
+		print("Scrambling the cube...")
+		scramble_cube()
 	print("Environment ready")
 
 	var prev_positions # previous face positions
@@ -152,6 +153,15 @@ func scramble_cube(min_rotations=10):
 
 func get_cube_state() -> Array:
 	return cube_state
+
+func is_solved():
+	for side in cube_state:
+		var first_face = side[0][0]
+		for row in side:
+			for face in row:
+				if face != first_face:
+					return false
+	return true
 	
 func get_initial_faces_and_positions():
 	""" This is unnecessarily complicated because I thought there is a bug but there actually wasn't and I'm not rewriting it again :^ )) """
