@@ -69,6 +69,12 @@ func _input(delta):
 	elif Input.is_key_pressed(KEY_9):
 		scramble_cube(10)
 
+func set_cube_size(size):
+	cube_size = size
+
+func set_animation(enabled):
+	animate = enabled
+
 func create_cube():
 	# Prepare an array for storing cube's state
 	cube_pieces = []

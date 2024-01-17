@@ -15,7 +15,7 @@ func _ready():
 	server_instance.start_server(4242)
 
 	# Set up cube environment
-	reset_environment()
+	#reset_environment()
 	
 func reset_environment():
 	cube_instance.reset_cube(false)

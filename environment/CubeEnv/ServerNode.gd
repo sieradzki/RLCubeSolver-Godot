@@ -33,22 +33,42 @@ func _process(delta):
 			var message = peer.get_utf8_string(peer.get_available_bytes())
 			print("Received from client: " + message)
 			# Process the message and respond
-			process_command(message)
-			# Only for testing
-			#var response = "Message received: " + message
-			#peer.put_data(response.to_utf8_buffer())
+			var response = process_command(message)
+			peer.put_data(response.to_utf8_buffer())
 
 func process_command(command: String) -> String:
 	var parts = command.split(":")
 	var json = JSON.new()
 	match parts[0]:
+		"initialize":
+			var init_params = parts[1].split(",")
+			if init_params.size() == 2:
+				var cube_size = int(init_params[0])
+				var animation_enabled = (init_params[1] == "1")
+				cube_instance.set_cube_size(cube_size)
+				cube_instance.set_animation(animation_enabled)
+				cube_instance.reset_cube()
+				return JSON.stringify({"status": "initialized"})
+			else:
+				return JSON.stringify({'error': 'Invalid init parameters'})
 		"reset":
 			cube_instance.reset_cube()
 			return JSON.stringify(cube_instance.get_cube_state())
-		"step": # placeholder
-			var action = parts[1]
-			var result = cube_instance.step(action)
-			return JSON.stringify({'next_state': result[0], 'reward': result[1], 'done': result[2], 'info': result[3]})
+		"step":
+			var action = parts[1].split(",")
+			if action.size() == 3:
+				var side = int(action[0]) # 0 or 1 (horizontal or vertical, maybe I should change naming) 
+				var layer = int(action[1]) 
+				var angle_ret = int(action[2]) # angle will (probably) be 0 or 1 on agent's side 
+				var angle = 90 if angle_ret == 0 else -90
+				cube_instance.rotate_side(side, layer, angle)
+				var next_state = cube_instance.get_cube_state()
+				var reward = int(cube_instance.is_solved())
+				var done = int(cube_instance.is_solved())
+				var result = [next_state, reward, done]
+				return JSON.stringify(result)
+			else:
+				return JSON.stringify({'error': 'Invalid action format'})
 		_:
 			return JSON.stringify({'error': 'Unknown command'})
 
