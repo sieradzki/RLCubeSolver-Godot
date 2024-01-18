@@ -18,7 +18,7 @@ func _ready():
 	#reset_environment()
 	
 func reset_environment():
-	cube_instance.reset_cube(false)
+	cube_instance.reset_cube(false, 3)
 
 func _input(delta):
 	""" Testing only """

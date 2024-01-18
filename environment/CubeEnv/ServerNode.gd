@@ -46,18 +46,18 @@ func process_command(command: String) -> String:
 				var cube_size = int(init_params[0])
 				var animation_enabled = (init_params[1] == "1")
 				cube_instance.set_cube_size(cube_size)
-				cube_instance.set_animation(animation_enabled)
-				cube_instance.reset_cube()
+				cube_instance.set_animation(false)
+				cube_instance.reset_cube(false)
 				return JSON.stringify({"status": "initialized"})
 			else:
 				return JSON.stringify({'error': 'Invalid init parameters'})
 		"reset":
-			cube_instance.reset_cube()
+			cube_instance.reset_cube(true)
 			return JSON.stringify(cube_instance.get_cube_state())
 		"step":
 			var action = parts[1].split(",")
 			if action.size() == 3:
-				var side = int(action[0]) # 0 or 1 (horizontal or vertical, maybe I should change naming) 
+				var side = int(action[0]) # 0 or 2 (horizontal or vertical, maybe I should change naming) 
 				var layer = int(action[1]) 
 				var angle_ret = int(action[2]) # angle will (probably) be 0 or 1 on agent's side 
 				var angle = 90 if angle_ret == 0 else -90

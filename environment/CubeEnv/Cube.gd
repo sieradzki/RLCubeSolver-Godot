@@ -32,11 +32,7 @@ var is_rotating = false
 var rng = RandomNumberGenerator.new()
 
 #func _ready():
-	#pass
-	#create_cube(cube_size)
-	#
-	#print(cube_state)
-	#print(current_positions)
+	#reset_cube(false, 3)
 	
 func _input(delta):
 	""" Testing only """
@@ -114,33 +110,33 @@ func create_cube():
 	cube_faces = ret[0]
 	current_positions = ret[1]
 
-func reset_cube(scramble=false):
+func reset_cube(scramble, random_moves=3):
 	print("Reseting environment...")
 	# Perform cleanup
 	for child in get_children():
 		# Check if the child is an instance of CSGBox3D
 		if child is CSGBox3D:
 			child.queue_free()  # Remove only CSGBox3D nodes
-	# Idk if this needs to be done but w/e
-	var cube_pieces = Array()
-	var cube_faces # face objects
-	var cube_state = [] # colors on each side
+			
+	cube_pieces = Array()
+	cube_faces # face objects
+	cube_state = [] # colors on each side
 	
 	create_cube()
 	if scramble:
 		print("Scrambling the cube...")
-		scramble_cube()
+		scramble_cube(random_moves)
 	print("Environment ready")
 
 	var prev_positions # previous face positions
 	var current_positions # current face positions
 
-	var is_rotating = false
+	is_rotating = false
 				
-func scramble_cube(min_rotations=10):
+func scramble_cube(random_moves=3):
 	rng.randomize() 
 
-	var num_rotations = rng.randi_range(min_rotations, min_rotations + 10)
+	var num_rotations = random_moves
 
 	for i in range(num_rotations):
 		var side = rng.randi_range(0, 1)

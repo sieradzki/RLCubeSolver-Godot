@@ -4,7 +4,7 @@ import threading
 
 
 class RubiksCubeEnv:
-  def __init__(self, server_address, server_port, cube_size=3, animation_enabled=False):
+  def __init__(self, server_address, server_port, cube_size=3, animation_enabled=False, random_moves=3):
     self.server_address = server_address
     self.server_port = server_port
     self.cube_size = cube_size
@@ -27,24 +27,29 @@ class RubiksCubeEnv:
 
   def _define_action_space(self, cube_size):
     # Actions: side (2 options) vertical or horizontal (i know i should rename this), layer (range(cube_size)), angle (2 options)
-    return {'side': range(2), 'layer': range(cube_size), 'angle': range(2)}
+    return {'side': [0, 2], 'layer': range(cube_size), 'angle': range(2)}
 
-  def reset(self):  # add cube_size
+  def reset(self):  # TODO add cube_size
+    # Reset the environment and receive the initial state
     self._send("reset")
     return self._receive()
 
   def step(self, action):
+    # Send the action to the server and receive the next state, reward and done flag
     action_str = f"{action['side']},{action['layer']},{action['angle']}"
     self._send(f"step:{action_str}")
     return self._receive()
 
   def close(self):
+    # Close the socket
     self.socket.close()
 
   def _send(self, message):
+    # Send message to server
     self.socket.sendall(message.encode())
 
   def _receive(self):
+    # Receive response from server
     response = self.socket.recv(4096)
     return json.loads(response.decode())
 
@@ -55,6 +60,6 @@ if __name__ == "__main__":
 
   # Create the environment
   env = RubiksCubeEnv(server_address, server_port,
-                      cube_size=2, animation_enabled=True)
+                      cube_size=2, animation_enabled=True, random_moves=3)
   print(env.action_space)
   print(env.observation_space)
