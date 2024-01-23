@@ -26,7 +26,7 @@ class RubiksCubeAgent:
         action = self.select_action()
         next_state, reward, done = self.env.step(action)
         state = next_state
-        time.sleep(2)
+        time.sleep(0.1)
         i += 1
 
       print(f"Episode {episode + 1} finished, solved: {done}, steps: {i}")

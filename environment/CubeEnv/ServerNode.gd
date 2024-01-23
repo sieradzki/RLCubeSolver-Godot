@@ -29,12 +29,17 @@ func _process(delta):
 
 	if connected:
 		peer.poll()  # Update the state of the connection
-		if peer.get_available_bytes() > 0:
-			var message = peer.get_utf8_string(peer.get_available_bytes())
-			print("Received from client: " + message)
-			# Process the message and respond
-			var response = process_command(message)
-			peer.put_data(response.to_utf8_buffer())
+		if peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			if peer.get_available_bytes() > 0:
+				var message = peer.get_utf8_string(peer.get_available_bytes())
+				#print("Received from client: " + message):w
+				# Process the message and respond
+				var response = process_command(message)
+				peer.put_data(response.to_utf8_buffer())
+		elif peer.get_status() == StreamPeerTCP.STATUS_ERROR or peer.get_status() == StreamPeerTCP.STATUS_NONE:
+			print("Client disconnected. Closing application.")
+			connected = false
+			get_tree().quit()
 
 func process_command(command: String) -> String:
 	var parts = command.split(":")
