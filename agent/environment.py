@@ -4,7 +4,7 @@ import threading
 
 
 class RubiksCubeEnv:
-  def __init__(self, server_address, server_port, cube_size=3, animation_enabled=False, random_moves=3):
+  def __init__(self, server_address, server_port, cube_size=3, animation_enabled=False):
     self.server_address = server_address
     self.server_port = server_port
     self.cube_size = cube_size
@@ -29,9 +29,9 @@ class RubiksCubeEnv:
     # Actions: side (2 options) vertical or horizontal (i know i should rename this), layer (range(cube_size)), angle (2 options)
     return {'side': [0, 2], 'layer': range(cube_size), 'angle': range(2)}
 
-  def reset(self):  # TODO add cube_size
+  def reset(self, no_moves):  # TODO add cube_size
     # Reset the environment and receive the initial state
-    self._send("reset")
+    self._send(f"reset:{no_moves}")
     return self._receive()
 
   def step(self, action):
@@ -60,6 +60,6 @@ if __name__ == "__main__":
 
   # Create the environment
   env = RubiksCubeEnv(server_address, server_port,
-                      cube_size=2, animation_enabled=True, random_moves=3)
+                      cube_size=2, animation_enabled=True)
   print(env.action_space)
   print(env.observation_space)

@@ -57,7 +57,12 @@ func process_command(command: String) -> String:
 			else:
 				return JSON.stringify({'error': 'Invalid init parameters'})
 		"reset":
-			cube_instance.reset_cube(true)
+			var init_params = parts[1].split(",")
+			if init_params.size() == 1:
+				var no_moves = int(init_params[0])
+				cube_instance.reset_cube(true, no_moves)
+			else:
+				cube_instance.reset_cube(true)
 			return JSON.stringify(cube_instance.get_cube_state())
 		"step":
 			var action = parts[1].split(",")

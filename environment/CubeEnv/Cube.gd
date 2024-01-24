@@ -110,7 +110,7 @@ func create_cube():
 	cube_faces = ret[0]
 	current_positions = ret[1]
 
-func reset_cube(scramble, random_moves=3):
+func reset_cube(scramble, random_moves=1):
 	print("Reseting environment...")
 	# Perform cleanup
 	for child in get_children():

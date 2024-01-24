@@ -4,8 +4,9 @@ import time
 
 
 class RubiksCubeAgent:
-  def __init__(self, env):
+  def __init__(self, env, no_moves=1):
     self.env = env
+    self.no_moves = no_moves
 
   def select_action(self):
     # Randomly select an action from the action space
@@ -18,7 +19,7 @@ class RubiksCubeAgent:
 
   def train(self, num_episodes):
     for episode in range(num_episodes):
-      state = self.env.reset()
+      state = self.env.reset(self.no_moves)
       done = False
       i = 0
 
@@ -26,7 +27,7 @@ class RubiksCubeAgent:
         action = self.select_action()
         next_state, reward, done = self.env.step(action)
         state = next_state
-        time.sleep(0.1)
+        # time.sleep(0.1)
         i += 1
 
       print(f"Episode {episode + 1} finished, solved: {done}, steps: {i}")
@@ -39,8 +40,9 @@ if __name__ == "__main__":
   animation_enabled = True
 
   env = RubiksCubeEnv(server_address, server_port,
-                      cube_size, animation_enabled, random_moves=3)
-  agent = RubiksCubeAgent(env)
+                      cube_size, animation_enabled)
+  print(env._receive())
+  agent = RubiksCubeAgent(env, no_moves=2)
 
   num_episodes = 100
   agent.train(num_episodes)
