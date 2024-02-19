@@ -137,21 +137,29 @@ func scramble_cube(random_moves=3):
 	rng.randomize() 
 
 	var num_rotations = random_moves
-
-	for i in range(num_rotations):
+	var last_side = -1 
+	var last_layer = -1
+	var last_angle = 0
+	
+	var i = 0
+	while i < num_rotations:
 		var side = rng.randi_range(0, 1)
-		if side:
-			side = CubeSide.BOTTOM
-		else:
-			side = CubeSide.LEFT
 		var layer = rng.randi_range(0, cube_size - 1)
-		var angle = rng.randi_range(0, 1)
-		if angle:
-			angle = 90
+		var angle = rng.randi_range(0, 1) * 2 - 1
+		
+		# Ensure the new move is not an immediate reversal of the last move
+		if side == last_side and layer == last_layer and angle == -last_angle:
+			continue
+		
+		if side:
+			rotate_side(CubeSide.BOTTOM, layer, angle * 90)
 		else:
-			angle = -90
+			rotate_side(CubeSide.LEFT, layer, angle * 90)
 
-		rotate_side(side, layer, angle)
+		last_side = side
+		last_layer = layer
+		last_angle = angle
+		i+=1
 
 func get_cube_state() -> Array:
 	return cube_state
