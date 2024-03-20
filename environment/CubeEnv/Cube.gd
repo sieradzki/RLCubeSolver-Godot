@@ -17,7 +17,7 @@ const AXIS_X = Vector3(1, 0, 0)
 const AXIS_Y = Vector3(0, 1, 0)
 const AXIS_Z = Vector3(0, 0, 1)
 
-var current_rotation_group: Node3D = null
+var active_rotation_pieces: Node3D = null
 
 # For storing cube's pieces state
 var cube_pieces = Array()
@@ -31,11 +31,13 @@ var is_rotating = false
 
 var rng = RandomNumberGenerator.new()
 
-#func _ready():
-	#reset_cube(false, 3)
+func _ready():
+	reset_cube(false, 3)
+	print(cube_state)
+	pass
 	
 func _input(delta):
-	""" Testing only """
+	""" For testing rotations """
 	if is_rotating:
 		return
 	if Input.is_key_pressed(KEY_1):
@@ -66,12 +68,15 @@ func _input(delta):
 		scramble_cube(10)
 
 func set_cube_size(size):
+	""" Set cube size """
 	cube_size = size
 
 func set_animation(enabled):
+	""" Enable or disable animation """
 	animate = enabled
 
 func create_cube():
+	""" Create cube """
 	# Prepare an array for storing cube's state
 	cube_pieces = []
 	for x in range(cube_size):
@@ -111,7 +116,8 @@ func create_cube():
 	current_positions = ret[1]
 
 func reset_cube(scramble, random_moves=1):
-	print("Reseting environment...")
+	""" Reset cube to the solved state """
+	#print("Reseting environment...")
 	# Perform cleanup
 	for child in get_children():
 		# Check if the child is an instance of CSGBox3D
@@ -124,16 +130,18 @@ func reset_cube(scramble, random_moves=1):
 	
 	create_cube()
 	if scramble:
-		print("Scrambling the cube...")
+		#print("Scrambling the cube...")
 		scramble_cube(random_moves)
-	print("Environment ready")
+	#print("Environment ready")
 
 	var prev_positions # previous face positions
 	var current_positions # current face positions
 
 	is_rotating = false
+
 				
 func scramble_cube(random_moves=3):
+	""" Scramble the cube """
 	rng.randomize() 
 
 	var num_rotations = random_moves
@@ -162,9 +170,11 @@ func scramble_cube(random_moves=3):
 		i+=1
 
 func get_cube_state() -> Array:
+	""" Get cube state """
 	return cube_state
 
 func is_solved():
+	""" Check if the cube is solved """
 	for side in cube_state:
 		var first_face = side[0][0]
 		for row in side:
@@ -173,8 +183,22 @@ func is_solved():
 					return false
 	return true
 	
+func is_solved_state(state_string):
+	""" Check if the state is a solved state """
+	var json = JSON.new()
+	var error = json.parse(state_string)
+	var state = json.data
+	for side in state:
+		var first_face = side[0][0]
+		
+		for row in side:
+			for face in row:
+				if face != first_face:
+					return false
+	return true
+	
 func get_initial_faces_and_positions():
-	""" This is unnecessarily complicated because I thought there is a bug but there actually wasn't and I'm not rewriting it again :^ )) """
+	""" Get initial state of cube's faces with their positions """
 	var all_faces = []
 	var all_positions = []
 
@@ -221,6 +245,7 @@ func get_initial_faces_and_positions():
 	return [all_faces, all_positions, cube_state]
 	
 func get_faces_positions(faces):
+	""" Get positions of faces """
 	var positions = []
 	for side in faces:
 		var side_positions = []
@@ -232,12 +257,13 @@ func get_faces_positions(faces):
 		positions.append(side_positions)
 	return positions
 
-# Helper function to round vector components
 func round_vector(vector):
+	""" Helper function to round vector components """
 	return Vector3(snapped(vector.x, 0.001), snapped(vector.y, 0.001), snapped(vector.z, 0.001))
 
 				
 func print_faces(faces):
+	""" Print faces positions """
 	for side in faces:
 		var row = []
 		for face in side:
@@ -246,14 +272,16 @@ func print_faces(faces):
 	
 
 func rotate_side(side, layer, angle):
+	""" Rotate given side and layer by angle """
 	is_rotating = true
-	if current_rotation_group:
-			disband_rotation_group(current_rotation_group)
-	current_rotation_group = create_rotation_group(side, layer)
-	rotate_group(current_rotation_group, get_rotation_axis(side), angle)
+	if active_rotation_pieces:
+			disband_rotation_pieces(active_rotation_pieces)
+	active_rotation_pieces = group_pieces_to_rotate(side, layer)
+	rotate_pieces(active_rotation_pieces, get_rotation_axis(side), angle)
 	update_cube_pieces(side, layer, angle)
 	
 func get_rotation_axis(side: CubeSide):
+	""" Get rotation axis based on CubeSide """
 	match side:
 		CubeSide.RIGHT, CubeSide.LEFT:
 			return AXIS_X
@@ -263,6 +291,7 @@ func get_rotation_axis(side: CubeSide):
 			return AXIS_Z
 
 func init_face(color, size):
+	""" Initialize face """
 	var face = []
 	for y in range(size):
 		var row = []
@@ -272,6 +301,7 @@ func init_face(color, size):
 	return face
 
 func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
+	""" Get pieces on a given side and layer """
 	var pieces = []
 	var size = cube_pieces.size()
 	var positions = []
@@ -316,10 +346,11 @@ func get_pieces_on_side(side: CubeSide, layer: int) -> Array:
 
 	return [pieces, positions]
 
-func create_rotation_group(side, layer) -> Node3D:
-	var rotation_group = Node3D.new()
-	rotation_group.name = "RotationGroup"
-	add_child(rotation_group)
+func group_pieces_to_rotate(side, layer) -> Node3D:
+	""" Group pieces to rotate """
+	var rotation_pieces = Node3D.new()
+	rotation_pieces.name = "RotationPieces"
+	add_child(rotation_pieces)
 
 	var pieces_on_side = get_pieces_on_side(side, layer)
 	var pieces_to_rotate = pieces_on_side[0]
@@ -328,11 +359,12 @@ func create_rotation_group(side, layer) -> Node3D:
 	#var reversed_positions = rotate_layer_counterclockwise(positions_after_rotation, cube_size)
 	for piece in pieces_to_rotate:
 		piece.get_parent().remove_child(piece)
-		rotation_group.add_child(piece)
+		rotation_pieces.add_child(piece)
 
-	return rotation_group
+	return rotation_pieces
 	
 func update_cube_pieces(side: CubeSide, layer: int, angle: int):
+	""" Update pieces positions """
 	var pieces_on_side = get_pieces_on_side(side, layer)
 	var pieces_to_rotate = pieces_on_side[0]
 	var pieces_positions = pieces_on_side[1]
@@ -359,6 +391,7 @@ func update_cube_pieces(side: CubeSide, layer: int, angle: int):
 		cube_pieces[new_pos[0]][new_pos[1]][new_pos[2]] = new_piece
 
 func rotate_layer_clockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	""" Rotate given side and layer clockwise """
 	var rotated_layer = []
 
 	for position in layer:
@@ -387,6 +420,7 @@ func rotate_layer_clockwise(layer: Array, size: int, side: CubeSide) -> Array:
 	return rotated_layer
 
 func rotate_layer_counterclockwise(layer: Array, size: int, side: CubeSide) -> Array:
+	""" Rotate given side and layer counter-clockwise """
 	var rotated_layer = []
 
 	for position in layer:
@@ -414,13 +448,14 @@ func rotate_layer_counterclockwise(layer: Array, size: int, side: CubeSide) -> A
 
 	return rotated_layer
 
-func disband_rotation_group(rotation_group: Node3D):
-	# Get the global transform of the rotation group
-	var group_global_transform = rotation_group.global_transform
+func disband_rotation_pieces(rotation_pieces: Node3D):
+	""" Disband group of pieces to rotate """
+	# Get the global transform of pieces before disbanding the group
+	var group_global_transform = rotation_pieces.global_transform
 
-	while rotation_group.get_child_count() > 0:
-		var piece = rotation_group.get_child(0)
-		rotation_group.remove_child(piece)
+	while rotation_pieces.get_child_count() > 0:
+		var piece = rotation_pieces.get_child(0)
+		rotation_pieces.remove_child(piece)
 
 		# Calculate the new local transform for the piece
 		var new_local_transform = group_global_transform * piece.transform
@@ -430,9 +465,10 @@ func disband_rotation_group(rotation_group: Node3D):
 		add_child(piece)
 
 	# Remove the rotation group from the scene tree
-	rotation_group.queue_free()
+	rotation_pieces.queue_free()
 
 func update_cube_state(): 
+	""" Update cube_state array with new pieces positions """
 	var temp_cube_state = cube_state.duplicate(true)
 	var temp_cube_faces = cube_faces.duplicate(true)
 	for side in range(6):
@@ -448,34 +484,36 @@ func update_cube_state():
 					cube_state[side][row][col] = temp_cube_state[new_side][new_row][new_col]
 				
 func find_face_pos(pos):
+	""" Find position of a face """
 	for side in range(6):
 		for row in range(cube_size):
 			for col in range(cube_size):
 				if current_positions[side][row][col] == pos:
 					return [side, row, col]
 	
-func rotate_group(rotation_group: Node3D, axis: Vector3, angle_degrees: float, duration: float = rotation_speed):
-	var start_rotation = rotation_group.rotation_degrees
+func rotate_pieces(rotation_pieces: Node3D, axis: Vector3, angle_degrees: float, duration: float = rotation_speed):
+	""" Rotate group of pieces """
+	var start_rotation = rotation_pieces.rotation_degrees
 	var end_rotation = start_rotation + axis * angle_degrees
 
 	if animate:
 		var tween = get_tree().create_tween()
-		tween.tween_property(rotation_group, "rotation_degrees", end_rotation, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(rotation_pieces, "rotation_degrees", end_rotation, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 		tween.play()
-		tween.finished.connect(_on_tween_finished.bind(rotation_group))
+		tween.finished.connect(_on_tween_finished.bind(rotation_pieces))
 	else:
-		rotation_group.rotation_degrees = end_rotation
-		disband_rotation_group(rotation_group)
-		current_rotation_group = null
+		rotation_pieces.rotation_degrees = end_rotation
+		disband_rotation_pieces(rotation_pieces)
+		active_rotation_pieces = null
 		prev_positions = current_positions
 		current_positions = get_faces_positions(cube_faces)
 		update_cube_state()
 		is_rotating = false
 		#print(cube_state)
 
-func _on_tween_finished(rotation_group):
-	disband_rotation_group(rotation_group)
-	current_rotation_group = null
+func _on_tween_finished(rotation_pieces):
+	disband_rotation_pieces(rotation_pieces)
+	active_rotation_pieces = null
 	prev_positions = current_positions
 	current_positions = get_faces_positions(cube_faces)
 	update_cube_state()

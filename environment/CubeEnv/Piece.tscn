@@ -21,6 +21,7 @@ albedo_color = Color(1, 0.647059, 0, 1)
 albedo_color = Color(1, 0, 0, 1)
 
 [node name="Body" type="CSGBox3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.186276, 0, 0)
 material = SubResource("StandardMaterial3D_2ww62")
 
 [node name="White" type="CSGBox3D" parent="."]

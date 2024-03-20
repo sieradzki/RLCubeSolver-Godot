@@ -18,7 +18,7 @@ func _input(event):
 		current_rotation_degrees.x += mouse_motion.y * speed
 
 		# Clamp the rotation on the X-axis to prevent flipping
-		current_rotation_degrees.x = clamp(current_rotation_degrees.x, -90, 90)
+		#current_rotation_degrees.x = clamp(current_rotation_degrees.x, -90, 90)
 		rotation_degrees = current_rotation_degrees
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP:
