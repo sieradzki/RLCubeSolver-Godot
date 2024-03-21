@@ -32,8 +32,8 @@ var is_rotating = false
 var rng = RandomNumberGenerator.new()
 
 func _ready():
-	reset_cube(false, 3)
-	print(cube_state)
+	#reset_cube(false, 3)
+	#print(cube_state)
 	pass
 	
 func _input(delta):
