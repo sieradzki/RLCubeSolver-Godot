@@ -72,6 +72,8 @@ python astar.py
 
 - 🟢 Scalability: The model handles various cube sizes, though larger cubes exponentially increase the state space, making A* searches more resource-intensive.
 
+See the results in [agent/astar.ipynb](agent/astar.ipynb).
+
 ## 6. Acknowledgments
 
 Inspired by state-of-the-art research in reinforcement learning and heuristic search techniques, including:
